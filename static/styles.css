@@ -1,10 +1,20 @@
 main {
     text-align: center;
 }
+
 main .form-control {
     /* center form controls */
     display: inline-block;
 
     /* override Bootstrap's 100% width for form controls */
     width: auto;
+}
+
+input[type="number"] {
+    text-align: right;
+}
+
+.scroll-box {
+    overflow-y: scroll;
+    height: 200px;
 }
