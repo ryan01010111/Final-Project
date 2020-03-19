@@ -7,7 +7,7 @@ from tempfile import mkdtemp
 from werkzeug.exceptions import default_exceptions, HTTPException, InternalServerError
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from helpers import validate_email, convert_int, convert_float, calc_times, format_date, apology, login_required
+from helpers import validate_email, convert_int, convert_float, calc_times, format_date, calc_progress, apology, login_required
 
 # Configure application
 app = Flask(__name__)
@@ -164,9 +164,37 @@ def register():
 def dashboard():
 
     if viewMode == "instructor":
-        return render_template("dashboard_instructor.html")
+
+        tbdLogs = db.execute("SELECT firstname, lastname, flightLogs.id, date FROM users JOIN flightLogs ON users.id = flightLogs.user_id WHERE assigned_instructor = :user AND confirmation != 1",
+                                user=session["user_id"])
+
+        return render_template("dashboard_instructor.html", tbdLogs=tbdLogs)
+
     else:
-        return render_template("dashboard_student.html")
+
+        user = db.execute("SELECT progress FROM users WHERE id = :user_id",
+                            user_id=session["user_id"])[0]
+        course = db.execute("SELECT course_name FROM courses JOIN courseAssignments ON courses.id = courseAssignments.course_id WHERE user_id = :user_id",
+                                user_id=session['user_id'])[0]['course_name']
+        tbdLogs = db.execute("SELECT id, date, notes FROM flightLogs WHERE user_id = :user AND confirmation != 1",
+                                user=session["user_id"])
+
+        return render_template("dashboard_student.html", user=user, tbdLogs=tbdLogs, course=course)
+
+
+@app.route("/change_view/<mode>")
+@login_required
+def change_view(mode):
+    """Change view mode"""
+
+    # if changing to instructor mode, ensure that user is instructor
+    if mode == "instructor" and db.execute("SELECT role FROM users WHERE id = :user_id", user_id=session["user_id"])[0]['role'] == "student":
+        return apology("Invalid request", 403)
+    else:
+
+        global viewMode
+        viewMode = mode
+        return redirect("/dashboard")
 
 
 @app.route("/user/<user_id>")
@@ -174,24 +202,42 @@ def dashboard():
 def show_user_profile(user_id):
 
     # fetch user data, including assigned course
-    user = db.execute("SELECT user_id, firstname, lastname, assigned_instructor, course_id, course_name FROM users JOIN courseAssignments ON users.id = courseAssignments.user_id JOIN courses ON courseAssignments.course_id = courses.id WHERE users.id = :user",
-                        user=user_id)
+    user = db.execute("SELECT user_id, firstname, lastname, role, assigned_instructor, course_id, course_name, progress FROM users JOIN courseAssignments ON users.id = courseAssignments.user_id JOIN courses ON courseAssignments.course_id = courses.id WHERE users.id = :user",
+                        user=user_id)[0]
 
     # check for "instructor" view mode
     if viewMode == "instructor":
-        # check if current user (instructor) is assigned to the user being viewed
-        if user[0]['assigned_instructor'] == session["user_id"]:
-            # show "instructor view"
 
+        # check if viewing user is user of profile to be viewed
+        if session["user_id"] == int(user_id):
+            # show self view
+            return render_template("profile.html", user=user, instructorView=True, isSelf=True)
+
+        # check if viewing user (instructor) is assigned to the user of profiled to viewed
+        elif user['assigned_instructor'] == session["user_id"]:
+
+            ## show "instructor view"
             # fetch and show course options
             courses = db.execute("SELECT id, course_name FROM courses")
+            # fetch and show logs
+            logs = db.execute("SELECT * FROM flightLogs WHERE user_id = :user ORDER BY date DESC",
+                                user=user_id)
 
-            return render_template("profile_student.html", user=user, courses=courses)
+            return render_template("profile_student.html", user=user, courses=courses, logs=logs)
+
+        # viewing user is instructor, but not assigned to user of profile to be viewed
         else:
-            # show standard view
+            # show standard view for instructor
             return render_template("profile.html", user=user, instructorView=True)
+
+    # student view
     else:
-        # show standard view
+
+        # check if viewing user is user of profile to be viewed
+        if session["user_id"] == int(user_id):
+            return render_template("profile.html", user=user, isSelf=True)
+
+        # show standard public view
         return render_template("profile.html", user=user)
 
 
@@ -220,10 +266,16 @@ def my_students():
 
     else:
 
-        # fetch students
-        students = db.execute("SELECT * FROM users WHERE assigned_instructor = :user",
-                                user=session["user_id"])
-        return render_template("my_students.html", students=students)
+        if viewMode == "instructor":
+
+            # fetch students
+            students = db.execute("SELECT * FROM users WHERE assigned_instructor = :user",
+                                    user=session["user_id"])
+            return render_template("my_students.html", students=students)
+
+        else:
+
+            return apology("Invalid request", 403)
 
 
 @app.route("/assign_course/<user_id>", methods=["POST"])
@@ -236,11 +288,26 @@ def assign_course(user_id):
         db.execute("UPDATE courseAssignments SET course_id = :newCourse WHERE user_id = :user_id",
                     newCourse=newCourse, user_id=user_id)
 
+        # update progress
+        course = db.execute("SELECT * FROM courses JOIN courseAssignments on courses.id = courseAssignments.course_id WHERE user_id = :student",
+                    student=user_id)[0]
+
+        if course['course_name'] == "No course":
+
+            db.execute("UPDATE users SET progress = 0 WHERE id = :student",
+                        student=user_id)
+        else:
+
+            logs = db.execute("SELECT * FROM flightLogs WHERE user_id = :student AND confirmation = 1",
+                                student=user_id)
+            db.execute("UPDATE users SET progress = :progress WHERE id = :student",
+                        progress=calc_progress(logs, course), student=user_id)
+
         flash("Course changed")
         return redirect(f"/user/{user_id}")
 
     else:
-        flash("Course could not be changed")
+        flash("Error: Course could not be changed")
         return redirect(f"/user/{user_id}")
 
 
@@ -286,28 +353,169 @@ def logbook():
         high_performance = calc_times(high_performance, total_hours)
         dual = calc_times(dual, total_hours)
         pic = calc_times(pic, total_hours)
+        if log_type == "Check Ride Prep":
+            check_ride_prep = total_hours
+        else:
+            check_ride_prep = None
 
         if not date:
 
-            flash("Error: Please enter a date!")
-            return render_template("logbook.html")
+            flash("Error: Please enter a date")
+            return redirect("/logbook")
 
         else:
             # insert log entry
-            db.execute("INSERT INTO flightLogs (user_id, date, log_type, route, aircraft, aircraft_ident, sel, mel, tailwheel, high_performance, total_hours, night_dual, dual, pic, takeoff_day, land_day, takeoff_night, land_night, takeoff_tower, land_tower, maneuver, cc_dual, cc_solo, cc_night, cc_150, instrument_actual, instrument_sim, instrument_approach) VALUES (:user, :date, :log_type, :route, :aircraft, :aircraft_ident, :sel, :mel, :tailwheel, :high_performance, :total_hours, :night_dual, :dual, :pic, :takeoff_day, :land_day, :takeoff_night, :land_night, :takeoff_tower, :land_tower, :maneuver, :cc_dual, :cc_solo, :cc_night, :cc_150, :instrument_actual, :instrument_sim, :instrument_approach)",
-                        user=user, date=date, log_type=log_type, route=route, aircraft=aircraft, aircraft_ident=aircraft_ident, sel=sel, mel=mel, tailwheel=tailwheel, high_performance=high_performance, total_hours=total_hours, night_dual=night_dual, dual=dual, pic=pic, takeoff_day=takeoff_day, land_day=land_day, takeoff_night=takeoff_night, land_night=land_night, takeoff_tower=takeoff_tower, land_tower=land_tower, maneuver=maneuver, cc_dual=cc_dual, cc_solo=cc_solo, cc_night=cc_night, cc_150=cc_150, instrument_actual=instrument_actual, instrument_sim=instrument_sim, instrument_approach=instrument_approach)
-
-            logs = db.execute("SELECT * FROM flightLogs WHERE user_id = :user",
-                                user=user)
+            db.execute("INSERT INTO flightLogs (user_id, date, log_type, route, aircraft, aircraft_ident, sel, mel, tailwheel, high_performance, total_hours, night_dual, dual, pic, takeoff_day, land_day, takeoff_night, land_night, takeoff_tower, land_tower, maneuver, cc_dual, cc_solo, cc_night, cc_150, instrument_actual, instrument_sim, instrument_approach, check_ride_prep) VALUES (:user, :date, :log_type, :route, :aircraft, :aircraft_ident, :sel, :mel, :tailwheel, :high_performance, :total_hours, :night_dual, :dual, :pic, :takeoff_day, :land_day, :takeoff_night, :land_night, :takeoff_tower, :land_tower, :maneuver, :cc_dual, :cc_solo, :cc_night, :cc_150, :instrument_actual, :instrument_sim, :instrument_approach, :check_ride_prep)",
+                        user=user, date=date, log_type=log_type, route=route, aircraft=aircraft, aircraft_ident=aircraft_ident, sel=sel, mel=mel, tailwheel=tailwheel, high_performance=high_performance, total_hours=total_hours, night_dual=night_dual, dual=dual, pic=pic, takeoff_day=takeoff_day, land_day=land_day, takeoff_night=takeoff_night, land_night=land_night, takeoff_tower=takeoff_tower, land_tower=land_tower, maneuver=maneuver, cc_dual=cc_dual, cc_solo=cc_solo, cc_night=cc_night, cc_150=cc_150, instrument_actual=instrument_actual, instrument_sim=instrument_sim, instrument_approach=instrument_approach, check_ride_prep=check_ride_prep)
 
             flash("Log entry successful")
-            return render_template("logbook.html", logs=logs)
+            return redirect("/logbook")
 
     else:
 
-        logs = db.execute("SELECT * FROM flightLogs WHERE user_id = :user",
+        logs = db.execute("SELECT * FROM flightLogs WHERE user_id = :user ORDER BY date DESC",
                                 user=session["user_id"])
         return render_template("logbook.html", logs=logs)
+
+
+@app.route("/flight_log/<log_id>", methods=["GET", "POST"])
+@login_required
+def flight_log(log_id):
+
+    if request.method == "GET":
+
+        """Display flight log"""
+
+        log = db.execute("SELECT * FROM flightLogs WHERE id = :log_id",
+                    log_id=log_id)[0]
+        # check that log exists
+        if not log:
+            return apology("Invalid request", 403)
+
+        # replace empty "None" and "" items with "-"
+        for x, y in log.items():
+            if not y or y == "":
+                log[x] = '-'
+
+        logUser = db.execute("SELECT firstname, lastname FROM users WHERE id = :logUser",
+                                logUser=log['user_id'])[0]
+
+        # check if log belongs to user
+        if session["user_id"] == log['user_id']:
+            return render_template("flight_log.html", log=log, user=logUser)
+        #check if log belongs to student of user
+        elif session["user_id"] == db.execute("SELECT assigned_instructor FROM users WHERE id = :student_id", student_id=log['user_id'])[0]['assigned_instructor']:
+            return render_template("flight_log.html", log=log, user=logUser, instructorView=True)
+        else:
+            return apology("Invalid request", 403)
+
+    else:
+
+        """Update confirmation and progress"""
+
+        # update confirmation
+        db.execute("UPDATE flightLogs SET confirmation = 1 WHERE id = :log_id",
+                    log_id=log_id)
+        student = db.execute("SELECT users.id FROM users JOIN flightLogs ON users.id = flightLogs.user_id WHERE flightLogs.id = :log_id",
+                    log_id=log_id)[0]['id']
+
+        # update progress
+        logs = db.execute("SELECT * FROM flightLogs WHERE user_id = :student AND confirmation = 1",
+                            student=student)
+        course = db.execute("SELECT * FROM courses JOIN courseAssignments on courses.id = courseAssignments.course_id WHERE user_id = :student",
+                            student=student)[0]
+        db.execute("UPDATE users SET progress = :progress WHERE id = :student",
+                    progress=calc_progress(logs, course), student=student)
+
+        return redirect(f"/user/{student}")
+
+
+@app.route("/log_notes/<log_id>", methods=["POST"])
+@login_required
+def log_notes(log_id):
+    """Update log notes"""
+
+    if request.method == "POST":
+
+        notes = request.form.get("logNotes")
+
+        if not notes:
+            return redirect(f"/flight_log/{log_id}")
+
+        db.execute("UPDATE flightLogs SET notes = :notes WHERE id = :log_id",
+                    notes=notes, log_id=log_id)
+
+        flash("Notes updated successfully")
+        return redirect(f"/flight_log/{log_id}")
+
+
+@app.route("/sessions", methods=["GET", "POST"])
+@login_required
+def tSessions():
+
+    if request.method == "POST":
+        """Add session"""
+
+        date = request.form.get("date")
+        student = request.form.get("student")
+        comments = request.form.get("comments")
+
+        db.execute("INSERT INTO sessions (date, instructor_id, student_id, comments) VALUES (:date, :instructor, :student, :comments)",
+                    date=date, instructor=session["user_id"], student=student, comments=comments)
+
+        flash(f"Session added for {date}")
+        return redirect("/sessions")
+
+    else:
+
+        if viewMode == "student":
+
+            tSessions = db.execute("SELECT sessions.id, date, comments, firstname, lastname FROM sessions JOIN users ON sessions.instructor_id = users.id WHERE student_id = :user_id ORDER BY date DESC",
+                                    user_id=session["user_id"])
+
+            return render_template("sessions_student.html", tSessions=tSessions)
+
+        # instructor view mode
+        else:
+
+            students = db.execute("SELECT id, firstname, lastname FROM users WHERE assigned_instructor = :user_id",
+                        user_id=session["user_id"])
+
+            tSessions = db.execute("SELECT sessions.id, date, comments, firstname, lastname FROM sessions JOIN users ON sessions.student_id = users.id WHERE instructor_id = :user_id ORDER BY date DESC",
+                                    user_id=session["user_id"])
+
+            return render_template("sessions_instructor.html", students=students, tSessions=tSessions, instructorView=True)
+
+
+@app.route("/session/<tSession_id>", methods=["GET", "POST"])
+@login_required
+def show_tSession(tSession_id):
+
+    if request.method == "POST":
+        """Update session"""
+
+        comments = request.form.get("comments")
+
+        if not comments:
+
+            flash("Comments were empty")
+            return redirect(f"/session/{tSession_id}")
+
+        else:
+
+            db.execute("UPDATE sessions SET comments = :comments WHERE id = :tSession_id",
+                        comments=comments, tSession_id=tSession_id)
+            return redirect("/sessions")
+
+    else:
+
+        tSession = db.execute("SELECT sessions.id, date, comments, firstname, lastname FROM sessions JOIN users ON sessions.student_id = users.id WHERE sessions.id = :tSession_id",
+                                tSession_id=tSession_id)[0]
+
+        if viewMode == "instructor":
+            return render_template("session.html", tSession=tSession, instructorView=True)
+        else:
+            return render_template("session.html", tSession=tSession)
 
 
 def errorhandler(e):

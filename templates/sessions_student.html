@@ -1,0 +1,33 @@
+{% extends "layout_student.html" %}
+
+{% block title %}
+    My Sessions
+{% endblock %}
+
+{% block main %}
+    <h1 class="mb-4">My Sessions</h1>
+    <br>
+
+    <!--existing sessions-->
+    <div class="container">
+
+        <h1 class="mb-4">_______</h1>
+        <h5 class="mb-4">All sessions</h5>
+        <div class="overflow-auto scroll-box">
+            {% for tSession in tSessions %}
+                <a class="btn-secondary" href="/session/{{ tSession['id'] }}">
+                    <div class="row btn-primary rounded text-left text-nowrap">
+                        <div class="col-4 col-sm-3 col-md-2 pl-0 ml-2 ml-md-5 sess1">{{ tSession['date'] | format_date }}</div>
+                        <div class="col-5 col-sm-3 col-md-2 pl-0 ml-0 mr-md-2 sess2">{{ tSession['firstname'] }} {{ tSession['lastname'] }}</div>
+                        {% if tSession['comments'] %}
+                            <div class="col mr-md-5 d-none d-sm-inline sess3">{{ tSession['comments'] }}</div>
+                        {% else %}
+                            <div class="col mr-md-5 d-none d-sm-inline sess3">No notes</div>
+                        {% endif %}
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+
+    </div>
+{% endblock %}

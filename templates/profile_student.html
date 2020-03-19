@@ -1,0 +1,72 @@
+{% extends "layout_instructor.html" %}
+
+{% block title %}
+    {{ user['firstname'] + " " + user['lastname'] }}
+{% endblock %}
+
+{% block main %}
+    <h1 class="mb-5">{{ user['firstname'] + " " + user['lastname'] }}</h1>
+    <div class="row mt-5">
+        <form class="col-md-8 mb-3" action="/assign_course/{{ user['user_id'] }}" method="post">
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text" id="courseLabel">Course</span>
+                    <button id="changeCourseButton" class="btn btn-outline-secondary rounded-left" type="submit" style="display: none">Change</button>
+                </div>
+                <select id="courseSelect" class="form-control" name="assignedCourse">
+                    <option value="initial" selected>{{ user['course_name'] }}</option>
+                    {% for course in courses %}
+                        <!--don't include selected option, which is already displayed-->
+                        {% if course['course_name'] != user['course_name'] %}
+                            <option value="{{ course['id'] }}">{{ course['course_name'] }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+        <div class="col-sm">
+            <div class="progress">
+                <div class="progress-bar progress-bar-striped" role="progressbar" style="width: {{ user['progress'] }}%">Progress: {{ user['progress'] }}%</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!--Session Log-->
+    </div>
+
+    <div class="container pt-5">
+
+        <h5 class="mb-4">Logs</h5>
+        <div class="overflow-auto scroll-box">
+            {% for log in logs %}
+                <a class="btn btn-primary btn-block" href="/flight_log/{{ log['id'] }}">
+                    <span class="float-left pl-sm-5">{{ log['date'] | format_date }}</span>
+                    <span>{{ log['log_type'] }}</span>
+                    {% if log['total_hours'] %}
+                        <span class="float-right pr-sm-5">{{ log['total_hours'] }}</span>
+                    {% else %}
+                        <span class="float-right pr-sm-5">N/A</span>
+                    {% endif %}
+                </a>
+            {% endfor %}
+        </div>
+
+    </div>
+
+    <script>
+        document.querySelector('#courseSelect').onchange = function() {
+
+            if (this.value !== 'initial') {
+
+                document.querySelector('#changeCourseButton').style.display = 'initial';
+                document.querySelector('#courseLabel').style.display = 'none';
+            }
+            else {
+
+                document.querySelector('#changeCourseButton').style.display = 'none';
+                document.querySelector('#courseLabel').style.display = 'initial';
+            }
+        };
+    </script>
+{% endblock %}

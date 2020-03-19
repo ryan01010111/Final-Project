@@ -1,0 +1,36 @@
+{% if instructorView %}
+    {% extends "layout_instructor.html" %}
+{% else %}
+    {% extends "layout_student.html" %}
+{% endif %}
+
+{% block title %}
+    {{ user['firstname'] + " " + user['lastname'] }}
+{% endblock %}
+
+{% block main %}
+    <h1 class="mb-5">{{ user['firstname'] + " " + user['lastname'] }}</h1>
+
+    {% if isSelf %}
+        {% if instructorView %}
+            <a class="btn btn-info float-right mb-2" href="/change_view/student">Student Mode</a>
+        {% elif user['role'] == 'instructor' %}
+            <a class="btn btn-info float-right mb-2" href="/change_view/instructor">Instructor Mode</a>
+        {% endif %}
+    {% endif %}
+
+    <div class="mt-5">
+        <table class="table">
+            <tr>
+                <td>{{ user['course_name'] }}</td>
+                {% if user['course_name'] != "No course" %}
+                    <td>
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped" role="progressbar" style="width: {{ user['progress'] }}%">Progress: {{ user['progress'] }}%</div>
+                        </div>
+                    </td>
+                {% endif %}
+            </tr>
+        </table>
+    </div>
+{% endblock %}

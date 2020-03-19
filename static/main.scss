@@ -1,0 +1,104 @@
+// customized sass variables for Bootstrap
+
+$theme-colors: (
+  "primary": #3973ac,
+  "secondary": #fff000,
+  "tertiary": #8c8c8c
+);
+
+$body-bg: #444;
+$body-color: #fff;
+$navbar-light-color: #222;
+$progress-bg: #222;
+$progress-bar-color: #222;
+$progress-bar-bg: #ffff00;
+$alert-color-level: -10;
+$alert-bg-level: 0;
+
+
+// import Bootstrap sheets
+@import "../node_modules/bootstrap/scss/bootstrap";
+
+
+// additional css
+.nav-item {
+    margin-left: 4vw;
+}
+
+.navbar-nav li {
+    font-weight: bold;
+}
+
+main {
+    text-align: center;
+}
+
+main .form-control {
+    /* center form controls */
+    display: inline-block;
+
+    /* override Bootstrap's 100% width for form controls */
+    width: auto;
+}
+
+input[type="number"] {
+    text-align: right;
+}
+
+.scroll-box {
+    overflow-y: scroll;
+    height: 200px;
+}
+
+.scroll-box div {
+    overflow-x: hidden;
+    margin: 4px 4px 4px 4px;
+}
+
+.scroll-box a:hover {
+    text-decoration: none;
+}
+
+textarea.notes[readonly] {
+    background-color: #fff;
+}
+
+.notes {
+    resize: none;
+}
+
+@media screen and (min-width: 700px) {
+  .form-control.notes {
+      min-width: 60%;
+  }
+}
+
+@media screen and (max-width: 699px) {
+  .form-control.notes {
+      min-width: 100%;
+  }
+}
+
+.logTable th {
+    background-color: #3973ac;
+}
+
+.logTable td {
+    border-left: solid;
+    border-color: #3973ac;
+}
+
+.pendingLogs p {
+    width: 170px;
+    overflow-x: hidden;
+}
+
+.progress {
+    height: 20px;
+    font-weight: bold;
+}
+
+.progress-bar-striped {
+  background-image: linear-gradient(45deg, rgba(0, 0, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(0, 0, 255, 0.15) 50%, rgba(0, 0, 255, 0.15) 75%, transparent 75%, transparent);
+  background-size: 0.625rem 0.625rem;
+}

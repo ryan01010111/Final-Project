@@ -1,0 +1,88 @@
+{% extends "layout_instructor.html" %}
+
+{% block title %}
+    My Sessions
+{% endblock %}
+
+{% block main %}
+    <h1 class="mb-5">My Sessions</h1>
+    <br>
+
+    <!--new session entry form-->
+    <div class="container border-top border-bottom pt-3 pb-3">
+
+        <button class="btn btn-primary btn-lg" id="addBtn" onclick="showNew();">Add Session</button>
+        <h3 id="addHead" style="display: none;">Add Session</h3>
+
+        <form action="/sessions" method="post" id="newForm" style="display: none;">
+
+            <!--date and type-->
+            <div class="form-group mt-4">
+                <input class="form-control mb-3" id="newDate" name="date" onchange="showSubmit();" type="date">
+                <select class="form-control" id="newStudent" onchange="showSubmit();" name="student">
+                    <option selected value="initial">Student</option>
+                    {% for student in students %}
+                        <option value="{{ student['id'] }}">{{ student['firstname'] }} {{ student['lastname'] }}</option>
+                    {% endfor %}
+                </select>
+
+                <div class="form-group row justify-content-center mt-3">
+                    <textarea class="form-control notes" id="newComments" name="comments" onfocus="comFocus();" rows="10"></textarea>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" id="submitNew" disabled type=submit>Add</button>
+
+        </form>
+    </div>
+
+    <!--existing sessions-->
+    <div class="container mt-5">
+
+        <h5 class="mb-4">All sessions</h5>
+        <div class="overflow-auto scroll-box">
+            {% for tSession in tSessions %}
+                <a class="btn-secondary" href="/session/{{ tSession['id'] }}">
+                    <div class="row btn-primary rounded text-left text-nowrap">
+                        <div class="col-4 col-sm-3 col-md-2 pl-0 ml-md-5 sess1">{{ tSession['date'] | format_date }}</div>
+                        <div class="col-5 col-sm-3 col-md-2 pl-0 ml-0 mr-md-2 sess2">{{ tSession['firstname'] }} {{ tSession['lastname'] }}</div>
+                        {% if tSession['comments'] %}
+                            <div class="col mr-md-5 d-none d-sm-inline sess3">{{ tSession['comments'] }}</div>
+                        {% else %}
+                            <div class="col mr-md-5 d-none d-sm-inline sess3">No notes</div>
+                        {% endif %}
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+
+
+    </div>
+
+    <script>
+
+        function showNew() {
+
+            document.querySelector('#addBtn').style.display = 'none';
+            document.querySelector('#addHead').style.display = "initial";
+            document.querySelector('#newForm').style.display = "initial";
+        }
+
+        function comFocus() {
+
+            document.querySelector('#newComments').onkeyup = function() {
+
+                showSubmit();
+            }
+        }
+
+        function showSubmit() {
+
+            if (document.querySelector('#newDate').value && document.querySelector('#newStudent').value !== 'initial' && document.querySelector('#newComments').value) {
+
+                document.querySelector('#submitNew').removeAttribute('disabled');
+            }
+        }
+
+    </script>
+{% endblock %}

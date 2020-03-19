@@ -1,0 +1,163 @@
+{% if instructorView %}
+    {% extends "layout_instructor.html" %}
+{% else %}
+    {% extends "layout_student.html" %}
+{% endif %}
+
+{% block title %}
+    Log for {{ log['date'] | format_date}}
+{% endblock %}
+
+{% block main %}
+    <h4 class="mt-3">{{ user['firstname'] }} {{ user['lastname'] }}</h4>
+    <h2 class="mt-3">{{ log['date'] | format_date}}</h2>
+    <h4 class="mt-4">{{ log['log_type'] }}</h4>
+    <br>
+
+    {% if log['log_type'] == "Exam" %}
+        <h1 class="mt-5">Exam only</h1>
+    {% else %}
+
+        <!--existing logs-->
+        <div class="container mt-3 logTable">
+
+            <table class="table table-sm">
+                <tr>
+                    <th>route</th>
+                    <th>aircraft</th>
+                    <th>ident</th>
+                </tr>
+                <tr>
+                    <td>{{ log['route'] }}</td>
+                    <td>{{ log['aircraft'] }}</td>
+                    <td>{{ log['aircraft_ident'] }}</td>
+                </tr>
+            </table>
+
+            <table class="table table-sm mt-3">
+                <tr>
+                    <th>Total</th>
+                    <th>Night</th>
+                    <th>Dual</th>
+                    <th>PIC</th>
+                </tr>
+                <tr>
+                    <td>{{ log['total_hours'] }}</td>
+                    <td>{{ log['night_dual'] }}</td>
+                    <td>{{ log['dual'] }}</td>
+                    <td>{{ log['pic'] }}</td>
+                </tr>
+            </table>
+
+            <table class="table table-sm mt-3">
+                <tr>
+                    <th>SEL</th>
+                    <th>MEL</th>
+                    <th>Tailwheel</th>
+                    <th>High Perf.</th>
+                </tr>
+                <tr>
+                    <td>{{ log['sel'] }}</td>
+                    <td>{{ log['mel'] }}</td>
+                    <td>{{ log['tailwheel'] }}</td>
+                    <td>{{ log['high_performance'] }}</td>
+                </tr>
+            </table>
+
+            <table class="table table-sm mt-3">
+                <tr>
+                    <th>T/O & Land Day</th>
+                    <th>T/O & Land Night</th>
+                    <th>T/O & Land Tower</th>
+                </tr>
+                <tr>
+                    <td>{{ log['takeoff_day'] }}/{{ log['land_day'] }}</td>
+                    <td>{{ log['takeoff_night'] }}/{{ log['land_night'] }}</td>
+                    <td>{{ log['takeoff_tower'] }}/{{ log['land_tower'] }}</td>
+                </tr>
+            </table>
+
+            <table class="table table-sm mt-3">
+                <tr>
+                    <th>Maneuver</th>
+                    <th>CC Dual</th>
+                    <th>CC Solo</th>
+                    <th>CC Night</th>
+                    <th>CC 150 NM</th>
+                </tr>
+                <tr>
+                    <td>{{ log['maneuver'] }}</td>
+                    <td>{{ log['cc_dual'] }}</td>
+                    <td>{{ log['cc_solo'] }}</td>
+                    <td>{{ log['cc_night'] }}</td>
+                    <td>{{ log['cc_150'] }}</td>
+                </tr>
+            </table>
+
+            <table class="table table-sm mt-3 mb-5">
+                <tr>
+                    <th>Instr. Actual</th>
+                    <th>Instr. Sim</th>
+                    <th>Instr. Appr.</th>
+                </tr>
+                <tr>
+                    <td>{{ log['instrument_actual'] }}</td>
+                    <td>{{ log['instrument_sim'] }}</td>
+                    <td>{{ log['instrument_approach'] }}</td>
+                </tr>
+            </table>
+            {% if log['confirmation'] != 1 %}
+                {% if instructorView %}
+                    <form action="/flight_log/{{ log['id'] }}" method="post">
+                        <button class="btn btn-success w-50 m-auto" type="submit">Confirm</button>
+                    </form>
+                {% else %}
+                    <a class="btn btn-tertiary w-50 m-auto" href="#">Unconfirmed</a>
+                {% endif %}
+            {% else %}
+                <a class="btn btn-success w-50 m-auto" href="#">Confirmed</a>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <!--notes-->
+    <h1 class="mb-4">_______</h1>
+    <h3>Notes</h3>
+    <!--empty fields replaced with "-"-->
+    {% if log['notes'] != "-" %}
+        <form action="/log_notes/{{ log['id'] }}" method="post">
+            <div class="form-group row justify-content-center mt-3">
+                <textarea class="form-control notes" readonly name="logNotes" rows="10">{{ log['notes'] }}</textarea>
+            </div>
+            <button class="btn btn-primary" id="editBtn" onclick="editNotes();" type="button">Edit notes</button>
+            <button class="btn btn-primary" id="submitBtn" type="submit" disabled style="display: none;">Submit</button>
+            <br>
+        </form>
+    {% else %}
+        <button class="btn btn-primary mt-3" id="addBtn1" onclick="addNotes();" type="button">Add notes</button>
+
+        <form action="/log_notes/{{ log['id'] }}" method="post" id="notes" style="display: none;">
+            <div class="form-group row justify-content-center mt-3">
+                <textarea class="form-control notes" name="logNotes" rows="10"></textarea>
+            </div>
+            <button class="btn btn-primary" type="submit">Add notes</button>
+        </form>
+    {% endif %}
+
+    <script>
+        function addNotes() {
+
+            document.querySelector('#addBtn1').style.display = 'none';
+            document.querySelector('#notes').style.display = 'initial';
+        }
+
+        function editNotes() {
+
+            document.querySelector('#editBtn').style.display = 'none';
+            document.querySelector('textarea').removeAttribute('readonly');
+            document.querySelector('textarea').focus();
+            document.querySelector('#submitBtn').style.display = 'initial';
+            setTimeout(() => { document.querySelector('#submitBtn').removeAttribute('disabled'); }, 1500);
+        }
+    </script>
+{% endblock %}

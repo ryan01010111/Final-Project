@@ -1,0 +1,32 @@
+{% extends "layout_student.html" %}
+
+{% block title %}
+    Dashboard
+{% endblock %}
+
+{% block main %}
+    <h2>Dashboard</h2>
+    <br>
+
+    <h4 class="mt-5 mb-3 text-left pl-sm-5 pl-2">{{ course }}</h4>
+    <div class="progress">
+        <div class="progress-bar progress-bar-striped" role="progressbar" style="width: {{ user['progress'] }}%">{{ user['progress'] }}%</div>
+    </div>
+
+    <h4 class="mt-5 mb-3">Pending logs</h4>
+    <div class="row border-top border-bottom" style="overflow-x: auto; white-space: nowrap; flex-wrap: nowrap;">
+        {% if not tbdLogs %}
+            <h3 class="col pt-4 pb-4" style="font-weight: normal;">No pending logs</h3>
+        {% else %}
+            {% for log in tbdLogs %}
+                <a class="btn btn-primary btn-lg m-1 text-left pendingLogs" href="/flight_log/{{ log['id'] }}" style="display: inline-block; float: none;">
+                    <p>{{ log['date'] }}</p>
+                    <p class="pt-3 mb-2" style="font-size: 14px;">Notes:</p>
+                    {% if log['notes'] %}
+                        <p style="font-size: 14px;">{{ log['notes'] }}</p>
+                    {% endif %}
+                </a>
+            {% endfor %}
+        {% endif %}
+    </div>
+{% endblock %}

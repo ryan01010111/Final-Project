@@ -1,0 +1,41 @@
+{% extends "layout_instructor.html" %}
+
+{% block title %}
+    My Students
+{% endblock %}
+
+{% block main %}
+    <h1 class="mb-5">My Students</h1>
+    {% if error == "email" %} <p style="color: red;">{{ message }}</p> {% endif %}
+    <button class="btn btn-primary" id="addBtn1" onclick="addStudent();" type="button">Add student</button>
+    <form id="addForm" action="/my_students" method="post" style="display: none;">
+        <div class="form-group">
+            <input autocomplete="off" class="form-control" name="email" placeholder="Student's email address" type="text">
+        </div>
+        <button class="btn btn-primary" type="submit">Add student</button>
+    </form>
+
+    <div class="mt-5">
+        <table class="table">
+            {% for row in students %}
+                <tr>
+                    <td>{{ row['firstname'] + " " + row['lastname'] }}</td>
+                    <td class="d-none d-sm-block">
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped" role="progressbar" style="width: {{ row['progress'] }}%">{{ row['progress'] }}%</div>
+                        </div>
+                    </td>
+                    <td><a class="btn btn-primary btn-sm" href="/user/{{ row['id'] }}">View</a></td>
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <script>
+        function addStudent() {
+
+            document.querySelector('#addBtn1').style.display = 'none';
+            document.querySelector('#addForm').style.display = 'initial';
+        }
+    </script>
+{% endblock %}

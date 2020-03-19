@@ -1,0 +1,30 @@
+{% extends "layout_instructor.html" %}
+
+{% block title %}
+    Dashboard
+{% endblock %}
+
+{% block main %}
+    <h2>Dashboard</h2>
+    <br>
+
+    <h4 class="mt-5 mb-3">Pending logs</h4>
+    <div class="row border-top border-bottom" style="overflow-x: auto; white-space: nowrap; flex-wrap: nowrap;">
+        {% if not tbdLogs %}
+            <h3 class="col pt-4 pb-4" style="font-weight: normal;">No pending logs</h3>
+        {% else %}
+            {% for log in tbdLogs %}
+                <a class="btn btn-primary btn-lg m-1 text-left pendingLogs" href="/flight_log/{{ log['id'] }}" style="display: inline-block; float: none;">
+                    <p>{{ log['firstname'] }}</p>
+                    <p>{{ log['lastname'] }}</p>
+                    <p>{{ log['date'] | format_date}}</p>
+                </a>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <!--students-->
+
+    <!--sessions-->
+
+{% endblock %}

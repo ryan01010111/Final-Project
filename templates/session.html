@@ -1,0 +1,78 @@
+{% if instructorView %}
+    {% extends "layout_instructor.html" %}
+{% else %}
+    {% extends "layout_student.html" %}
+{% endif %}
+
+{% block title %}
+    Session for {{ tSession['date'] | format_date}}
+{% endblock %}
+
+{% block main %}
+    <!--instructor view (edit)-->
+    {% if instructorView %}
+        <h4 class="mt-3">{{ tSession['firstname'] }} {{ tSession['lastname'] }}</h4>
+        <h2 class="mt-3">{{ tSession['date'] | format_date}}</h2>
+        <br>
+
+        <!--comments-->
+        <h1 class="mb-4">_______</h1>
+        <h3>Comments</h3>
+        {% if tSession['comments'] %}
+            <form action="/session/{{ tSession['id'] }}" method="post">
+                <div class="form-group row justify-content-center mt-3">
+                    <textarea class="form-control notes" readonly name="comments" rows="10">{{ tSession['comments'] }}</textarea>
+                </div>
+                <button class="btn btn-primary" id="editBtn" onclick="editComments();" type="button">Edit comments</button>
+                <button class="btn btn-primary" id="submitBtn" type="submit" disabled style="display: none;">Submit</button>
+                <br>
+            </form>
+        {% else %}
+            <button class="btn btn-primary mt-3" id="addBtn1" onclick="addComments();" type="button">Add comments</button>
+
+            <form action="/session/{{ tSession['id'] }}" method="post" id="comments" style="display: none;">
+                <div class="form-group row justify-content-center mt-3">
+                    <textarea class="form-control notes" name="comments" rows="10"></textarea>
+                </div>
+                <button class="btn btn-primary" type="submit">Add comments</button>
+            </form>
+        {% endif %}
+
+    <!--student view (no edit)-->
+    {% else %}
+        <h4 class="mt-3">{{ tSession['firstname'] }} {{ tSession['lastname'] }}</h4>
+        <h2 class="mt-3">{{ tSession['date'] | format_date}}</h2>
+        <br>
+
+        <!--comments-->
+        <h1 class="mb-4">_______</h1>
+        {% if tSession['comments'] != "-" %}
+            <h3>Comments</h3>
+            <form action="#">
+                <div class="form-group row justify-content-center mt-3">
+                    <textarea class="form-control notes" readonly name="comments" rows="10">{{ tSession['comments'] }}</textarea>
+                </div>
+                <br>
+            </form>
+        {% else %}
+            <h3>No comments</h2>
+        {% endif %}
+    {% endif %}
+
+    <script>
+        function addComments() {
+
+            document.querySelector('#addBtn1').style.display = 'none';
+            document.querySelector('#comments').style.display = 'initial';
+        }
+
+        function editComments() {
+
+            document.querySelector('#editBtn').style.display = 'none';
+            document.querySelector('textarea').removeAttribute('readonly');
+            document.querySelector('textarea').focus();
+            document.querySelector('#submitBtn').style.display = 'initial';
+            setTimeout(() => { document.querySelector('#submitBtn').removeAttribute('disabled'); }, 1500);
+        }
+    </script>
+{% endblock %}
