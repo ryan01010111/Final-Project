@@ -40,9 +40,10 @@ The dashboard is, by default, the first interface that every user (instructor an
 dashboard is meant to provide a convenient view of the most in-demand data for a given user.
 
 **Features**:
-Instructor View - notifications for flight logs of user's students that are awaiting confirmation by the user
 
-Student View - current training course (see below) - progress in current course (see below) - notifications for user's flight logs that are awaiting confirmation by the user's instructor
+- Instructor View - notifications for flight logs of user's students that are awaiting confirmation by the user
+
+- Student View - current training course (see below) - progress in current course (see below) - notifications for user's flight logs that are awaiting confirmation by the user's instructor
 
 ### 4. Courses
 
